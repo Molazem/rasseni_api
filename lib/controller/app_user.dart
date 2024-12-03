@@ -69,18 +69,38 @@ class AppUser extends ChangeNotifier {
     return coursesByLabel;
   }
 
-  void completeCourseItem(String courseId, String itemId) {
-    final course =
-        myCoursesList.firstWhere((c) => c.id == courseId, orElse: () => null);
-    if (course != null) {
-      final completedItems =
-          course.content.where((item) => item.id == itemId).length;
-      final totalItems = course.content.length;
+  void completeCourseItem(String courseId, String itemId,
+      {bool remove = false}) {
+    // Use a nullable variable
+    final course = myCoursesList.firstWhere(
+      (c) => c.id == courseId,
+      orElse: () => CoursesModel(
+          id: '',
+          name: '',
+          label: '',
+          image: '',
+          content: [] // Default empty course
+          ),
+    );
 
-      if (totalItems > 0) {
-        final progress = completedItems / totalItems;
-        updateProgress(courseId, progress);
-      }
+    // Ensure course is valid before proceeding
+    if (course.id.isEmpty) {
+      print("Course not found for ID: $courseId");
+      return; // Exit gracefully
     }
+
+    // Get or initialize completed items set
+    final completedItems =
+        courseProgress[courseId]?.toString().split(',').toSet() ?? {};
+
+    if (remove) {
+      completedItems.remove(itemId);
+    } else {
+      completedItems.add(itemId);
+    }
+
+    // Update progress based on completed items
+    courseProgress[courseId] = completedItems.length / course.content.length;
+    notifyListeners();
   }
 }
