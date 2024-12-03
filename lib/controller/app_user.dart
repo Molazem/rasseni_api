@@ -6,11 +6,13 @@ class AppUser extends ChangeNotifier {
   List<CoursesModel> theCoursesList = [];
   List<CoursesModel> myCoursesList = [];
   bool _isLoading = false;
-  Map<String, double> courseProgress = {}; // Track progress for each course
+  Map<String, Set<String>> courseProgress =
+      {}; // Track progress by courseId and itemId
 
   AppUser() {
     _loadData();
   }
+
   void _filterLoadedCourses() {
     theCoursesList.removeWhere(
         (item) => myCoursesList.any((myItem) => myItem.name == item.name));
@@ -28,7 +30,6 @@ class AppUser extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Asynchronous loading of data
   Future<void> _loadData() async {
     if (_isLoading) return;
     _isLoading = true;
@@ -47,15 +48,32 @@ class AppUser extends ChangeNotifier {
     }
   }
 
-  void updateProgress(String courseId, double progress) {
-    if (courseProgress.containsKey(courseId)) {
-      courseProgress[courseId] = progress;
-      notifyListeners();
+  // Update progress for a course item (completed or not)
+  void updateProgress(String courseId, String itemId, bool isCompleted) {
+    if (!courseProgress.containsKey(courseId)) {
+      courseProgress[courseId] = {};
     }
+
+    if (isCompleted) {
+      courseProgress[courseId]?.add(itemId);
+    } else {
+      courseProgress[courseId]?.remove(itemId);
+    }
+    notifyListeners();
+  }
+
+  bool isItemCompleted(String courseId, String itemId) {
+    return courseProgress[courseId]?.contains(itemId) ?? false;
   }
 
   double getProgress(String courseId) {
-    return courseProgress[courseId] ?? 0.0;
+    final completedItems = courseProgress[courseId]?.length ?? 0;
+    final totalItems = myCoursesList
+            .firstWhere((course) => course.id == courseId)
+            .content
+            .length ??
+        0;
+    return totalItems > 0 ? completedItems / totalItems : 0.0;
   }
 
   Map<String, List<CoursesModel>> getCoursesByLabel() {
@@ -67,40 +85,5 @@ class AppUser extends ChangeNotifier {
       coursesByLabel[course.label]!.add(course);
     }
     return coursesByLabel;
-  }
-
-  void completeCourseItem(String courseId, String itemId,
-      {bool remove = false}) {
-    // Use a nullable variable
-    final course = myCoursesList.firstWhere(
-      (c) => c.id == courseId,
-      orElse: () => CoursesModel(
-          id: '',
-          name: '',
-          label: '',
-          image: '',
-          content: [] // Default empty course
-          ),
-    );
-
-    // Ensure course is valid before proceeding
-    if (course.id.isEmpty) {
-      print("Course not found for ID: $courseId");
-      return; // Exit gracefully
-    }
-
-    // Get or initialize completed items set
-    final completedItems =
-        courseProgress[courseId]?.toString().split(',').toSet() ?? {};
-
-    if (remove) {
-      completedItems.remove(itemId);
-    } else {
-      completedItems.add(itemId);
-    }
-
-    // Update progress based on completed items
-    courseProgress[courseId] = completedItems.length / course.content.length;
-    notifyListeners();
   }
 }

@@ -60,7 +60,7 @@ class MyCourses extends StatelessWidget {
                                   MaterialPageRoute(
                                       builder: (context) => CourseContent(
                                             theCourseItems: user
-                                                .myCoursesList[index].content,
+                                                .myCoursesList[index].content,courseId: user.myCoursesList[index].id,
                                           ))),
                               tileColor: const Color(0xffFF7427),
                               trailing: IconButton(
